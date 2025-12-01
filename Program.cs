@@ -21,7 +21,6 @@ builder.Services.AddScoped<IFilmeService, FilmeService>();
 builder.Services.AddScoped<ISerieService, SerieService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IApiExternaService, ApiExternaService>();
-builder.Services.AddScoped<IAvaliacaoService, AvaliacaoService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
 // Configura EF Core com SQLite

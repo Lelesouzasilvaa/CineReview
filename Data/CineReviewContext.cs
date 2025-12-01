@@ -13,7 +13,6 @@ namespace CineReview.Api.Data
         public DbSet<Filme> Filmes { get; set; }
         public DbSet<Serie> Series { get; set; }
         public DbSet<Usuario> Usuarios { get; set; }
-        public DbSet<Avaliacao> Avaliacoes { get; set; }
         public DbSet<Midia> Midias { get; set; }
 
         public DbSet<Review> Reviews { get; set; }  // ← Review é a tabela de avaliações
