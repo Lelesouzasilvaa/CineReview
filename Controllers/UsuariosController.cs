@@ -33,7 +33,7 @@ namespace CineReview.Api.Controllers
             {
                 Nome = dto.Nome,
                 Email = dto.Email,
-                Senha = dto.Senha // para produção, use hash!
+                SenhaHash = dto.Senha // para produção, use hash!
             };
 
             _context.Usuarios.Add(usuario);

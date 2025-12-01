@@ -1,51 +1,79 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+﻿using CineReview.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using CineReview.Api.Data;
-using CineReview.Api.Models;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using System.Security.Cryptography;
 
-namespace CineReview.Api.Services
+public class AuthService : IAuthServices
 {
-    public class AuthService : IAuthService
+    private readonly CineReviewContext _context;
+    private readonly IConfiguration _config;
+
+    public AuthService(CineReviewContext context, IConfiguration config)
     {
-        private readonly CineReviewContext _context;
-        private readonly IConfiguration _config;
+        _context = context;
+        _config = config;
+    }
 
-        public AuthService(CineReviewContext context, IConfiguration config)
-        {
-            _context = context;
-            _config = config;
-        }
+    public async Task<string?> Login(string email, string senha)
+    {
+        // Busca apenas por email (coluna Senha não existe no esquema)
+        var usuario = await _context.Usuarios
+            .FirstOrDefaultAsync(u => u.Email == email);
 
-        // Valida se o usuário existe no banco
-        public async Task<bool> ValidarCredenciaisAsync(string email, string senha)
-        {
-            var usuario = await _context.Usuarios
-                .FirstOrDefaultAsync(u => u.Email == email && u.Senha == senha);
+        if (usuario == null)
+            return null;
 
-            return usuario != null;
-        }
+        // Verifica senha: se o valor em banco for "salt:hash" usa PBKDF2,
+        // caso contrário aceita igualdade direta (compatibilidade com dados antigos).
+        if (!VerifyPassword(usuario.SenhaHash, senha))
+            return null;
 
-        // Gera token JWT
-        public string GerarToken(string email)
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var jwtKey = _config["AppSettings:JwtKey"]
-                         ?? throw new InvalidOperationException("AppSettings:JwtKey não configurado");
-            var key = Encoding.ASCII.GetBytes(jwtKey);
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var tokenDescriptor = new SecurityTokenDescriptor
+        var token = new JwtSecurityToken(
+            claims: new[]
             {
-                Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Email, email) }),
-                Expires = DateTime.UtcNow.AddHours(4),
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
+                new Claim("id", usuario.Id.ToString()),
+                new Claim("email", usuario.Email)
+            },
+            expires: DateTime.UtcNow.AddHours(2),
+            signingCredentials: creds
+        );
 
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    // Suporta dois formatos:
+    // - "saltBase64:hashBase64" -> PBKDF2-SHA256 (recomendado)
+    // - "plain" -> comparação direta (compatibilidade)
+    private static bool VerifyPassword(string stored, string provided)
+    {
+        if (string.IsNullOrEmpty(stored))
+            return false;
+
+        if (stored.Contains(':'))
+        {
+            var parts = stored.Split(':', 2);
+            try
+            {
+                var salt = Convert.FromBase64String(parts[0]);
+                var hash = Convert.FromBase64String(parts[1]);
+
+                using var derive = new Rfc2898DeriveBytes(provided, salt, 100_000, HashAlgorithmName.SHA256);
+                var testHash = derive.GetBytes(hash.Length);
+                return CryptographicOperations.FixedTimeEquals(testHash, hash);
+            }
+            catch
+            {
+                return false;
+            }
         }
+
+        // Compatibilidade com dados antigos (senha em texto simples)
+        return stored == provided;
     }
 }

@@ -1,43 +1,24 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace CineReview.Api.Controllers
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
 {
-    public record LoginDTO(string Email, string Senha);
+    private readonly IAuthServices _auth;
 
-    public interface IAuthService
+    public AuthController(IAuthServices auth)
     {
-        Task<bool> ValidarCredenciaisAsync(string email, string senha);
-        string GerarToken(string email);
+        _auth = auth;
     }
 
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AuthController : ControllerBase
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(LoginDTO dto)
     {
-        private readonly IAuthService _authService;
+        var token = await _auth.Login(dto.Email, dto.Senha);
 
-        public AuthController(IAuthService authService)
-        {
-            _authService = authService;
-        }
+        if (token == null)
+            return Unauthorized("Email ou senha inválidos");
 
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDTO dto)
-        {
-            if (dto is null)
-                return BadRequest();
-
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var credenciaisValidas = await _authService.ValidarCredenciaisAsync(dto.Email, dto.Senha);
-
-            if (!credenciaisValidas)
-                return Unauthorized();
-
-            var token = _authService.GerarToken(dto.Email);
-
-            return Ok(new { Token = token });
-        }
+        return Ok(new { token });
     }
 }

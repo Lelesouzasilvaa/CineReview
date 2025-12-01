@@ -1,10 +1,4 @@
-using System.Threading.Tasks;
-
-namespace CineReview.Api.Services
+public interface IAuthServices
 {
-    public interface IAuthService
-    {
-        Task<bool> ValidarCredenciaisAsync(string email, string senha);
-        string GerarToken(string email);
-    }
+    Task<string?> Login(string email, string senha);
 }

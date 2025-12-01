@@ -14,18 +14,19 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-
+// Registra serviços corretos
+builder.Services.AddScoped<IAuthServices, AuthService>();
+builder.Services.AddScoped<IMidiaService, MidiaService>();
+builder.Services.AddScoped<IApiExternaService, ApiExternaService>();
 
 // Configura EF Core com SQLite
 builder.Services.AddDbContext<CineReviewContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
-//   CONFIGURAÇÃO DO JWT
-
-var jwtKey = builder.Configuration["AppSettings:JwtKey"];
+// CONFIGURAÇÃO DO JWT
+var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrWhiteSpace(jwtKey))
-    throw new InvalidOperationException("AppSettings:JwtKey não está configurado no appsettings.json");
+    throw new InvalidOperationException("Jwt:Key não está configurado no appsettings.json");
 
 var key = Encoding.ASCII.GetBytes(jwtKey);
 
@@ -44,14 +45,6 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(key)
     };
 });
-
-
-// INJEÇÃO DE DEPENDÊNCIAS
-
-builder.Services.AddScoped<CineReview.Api.Services.IMidiaService, MidiaService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IApiExternaService, ApiExternaService>();
-builder.Services.AddScoped<IMidiaService, MidiaService>();
 
 builder.Services.AddHttpClient();
 
