@@ -143,11 +143,3 @@ Com relacionamentos configurados via Entity Framework Core.
   "AllowedHosts": "*"
 }
 ```
-
----
-
-# Desenvolvido por
-
-## Jhenifer Januário  
-Projeto acadêmico para estudo de APIs REST e Entity Framework Core.
-
