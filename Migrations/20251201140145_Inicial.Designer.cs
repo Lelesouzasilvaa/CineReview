@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CineReview.Api.Migrations
 {
     [DbContext(typeof(CineReviewContext))]
-    [Migration("20251201133227_nova2")]
-    partial class nova2
+    [Migration("20251201140145_Inicial")]
+    partial class Inicial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

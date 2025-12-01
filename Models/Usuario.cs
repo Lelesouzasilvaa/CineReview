@@ -5,9 +5,9 @@ namespace CineReview.Api.Models
     public class Usuario
     {
         public int Id { get; set; }
-        public string Nome { get; set; } = null!;
-        public string Email { get; set; } = null!;
-        public string SenhaHash { get; set; } = null!;
+        public string Nome { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string SenhaHash { get; set; } = string.Empty;
         public ICollection<Avaliacao>? Avaliacoes { get; set; }
     }
 }

@@ -51,14 +51,6 @@ builder.Services.AddHttpClient();
 // Cria o app
 var app = builder.Build();
 
-// Executa migrações e popula o banco
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<CineReviewContext>();
-    context.Database.Migrate();
-    SeedData.Initialize(context);
-}
-
 // Configura o pipeline
 if (app.Environment.IsDevelopment())
 {
