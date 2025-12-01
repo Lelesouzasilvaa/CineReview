@@ -1,4 +1,12 @@
-public interface IAuthServices
+using CineReview.Api.DTOs.Auth;
+using System.Threading.Tasks;
+
+namespace CineReview.Api.Services.Interfaces
 {
-    Task<string?> Login(string email, string senha);
+    public interface IAuthService
+    {
+        Task<UserReadDto> RegistrarAsync(RegisterDto dto);
+        Task<UserReadDto> LoginAsync(LoginDto dto);
+        string GerarToken(CineReview.Api.Models.Usuario usuario);
+    }
 }

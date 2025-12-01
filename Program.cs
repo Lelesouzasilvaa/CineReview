@@ -15,9 +15,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Registra serviços corretos
-builder.Services.AddScoped<IAuthServices, AuthService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMidiaService, MidiaService>();
+builder.Services.AddScoped<IFilmeService, FilmeService>();
+builder.Services.AddScoped<ISerieService, SerieService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IApiExternaService, ApiExternaService>();
+builder.Services.AddScoped<IAvaliacaoService, AvaliacaoService>();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
 // Configura EF Core com SQLite
 builder.Services.AddDbContext<CineReviewContext>(options =>

@@ -1,6 +1,4 @@
 using CineReview.Api.DTOs;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace CineReview.Api.Services.Interfaces
 {
@@ -13,4 +11,5 @@ namespace CineReview.Api.Services.Interfaces
         Task<bool> DeleteAsync(int id);
         Task<IEnumerable<FilmeReadDto>> GetRankingAsync(int top);
     }
+
 }

@@ -1,79 +1,89 @@
 ﻿using CineReview.Api.Data;
+using CineReview.Api.DTOs.Auth;
+using CineReview.Api.Models;
+using CineReview.Api.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using System.Security.Cryptography;
 
-public class AuthService : IAuthServices
+namespace CineReview.Api.Services.Implementations
 {
-    private readonly CineReviewContext _context;
-    private readonly IConfiguration _config;
-
-    public AuthService(CineReviewContext context, IConfiguration config)
+    public class AuthService : IAuthService
     {
-        _context = context;
-        _config = config;
-    }
+        private readonly CineReviewContext _context;
+        private readonly IConfiguration _config;
 
-    public async Task<string?> Login(string email, string senha)
-    {
-        // Busca apenas por email (coluna Senha não existe no esquema)
-        var usuario = await _context.Usuarios
-            .FirstOrDefaultAsync(u => u.Email == email);
-
-        if (usuario == null)
-            return null;
-
-        // Verifica senha: se o valor em banco for "salt:hash" usa PBKDF2,
-        // caso contrário aceita igualdade direta (compatibilidade com dados antigos).
-        if (!VerifyPassword(usuario.SenhaHash, senha))
-            return null;
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            claims: new[]
-            {
-                new Claim("id", usuario.Id.ToString()),
-                new Claim("email", usuario.Email)
-            },
-            expires: DateTime.UtcNow.AddHours(2),
-            signingCredentials: creds
-        );
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    // Suporta dois formatos:
-    // - "saltBase64:hashBase64" -> PBKDF2-SHA256 (recomendado)
-    // - "plain" -> comparação direta (compatibilidade)
-    private static bool VerifyPassword(string stored, string provided)
-    {
-        if (string.IsNullOrEmpty(stored))
-            return false;
-
-        if (stored.Contains(':'))
+        public AuthService(CineReviewContext context, IConfiguration config)
         {
-            var parts = stored.Split(':', 2);
-            try
-            {
-                var salt = Convert.FromBase64String(parts[0]);
-                var hash = Convert.FromBase64String(parts[1]);
-
-                using var derive = new Rfc2898DeriveBytes(provided, salt, 100_000, HashAlgorithmName.SHA256);
-                var testHash = derive.GetBytes(hash.Length);
-                return CryptographicOperations.FixedTimeEquals(testHash, hash);
-            }
-            catch
-            {
-                return false;
-            }
+            _context = context;
+            _config = config;
         }
 
-        // Compatibilidade com dados antigos (senha em texto simples)
-        return stored == provided;
+        public async Task<UserReadDto> RegistrarAsync(RegisterDto dto)
+        {
+            if (await _context.Usuarios.AnyAsync(x => x.Email == dto.Email))
+                throw new Exception("E-mail já cadastrado.");
+
+            var usuario = new Usuario
+            {
+                Nome = dto.Nome,
+                Email = dto.Email,
+                SenhaHash = dto.Senha  // senha "crua"
+            };
+
+            _context.Usuarios.Add(usuario);
+            await _context.SaveChangesAsync();
+
+            return new UserReadDto
+            {
+                Id = usuario.Id,
+                Nome = usuario.Nome,
+                Email = usuario.Email,
+                Token = GerarToken(usuario)
+            };
+        }
+
+        public async Task<UserReadDto> LoginAsync(LoginDto dto)
+        {
+            var usuario = await _context.Usuarios.FirstOrDefaultAsync(x => x.Email == dto.Email);
+
+            // Comparação simples da senha em texto puro
+            if (usuario == null || usuario.SenhaHash != dto.Senha)
+                throw new UnauthorizedAccessException("Credenciais inválidas.");
+
+            return new UserReadDto
+            {
+                Id = usuario.Id,
+                Nome = usuario.Nome,
+                Email = usuario.Email,
+                Token = GerarToken(usuario)
+            };
+        }
+
+        public string GerarToken(Usuario usuario)
+        {
+            var key = Encoding.ASCII.GetBytes(_config["Jwt:Key"]);
+
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                new Claim(ClaimTypes.Name, usuario.Nome),
+                new Claim(ClaimTypes.Email, usuario.Email)
+            };
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.UtcNow.AddHours(4),
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
+        }
     }
 }

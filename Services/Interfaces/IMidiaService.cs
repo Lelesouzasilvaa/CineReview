@@ -1,11 +1,14 @@
 using CineReview.Api.DTOs;
 
-namespace CineReview.Api.Services;
-
-public interface IMidiaService
+namespace CineReview.Api.Services
 {
-    Task<FilmeReadDto> CreateFilmeAsync(FilmeCreateDto dto);
-    Task<IEnumerable<FilmeReadDto>> GetFilmesAsync(int? top = null);
-    Task<IEnumerable<FilmeReadDto>> GetFilmesRankedAsync(int top);
-    Task<FilmeReadDto?> GetFilmeByIdAsync(int id);
+    public interface IMidiaService
+    {
+        Task<FilmeReadDto> CreateFilmeAsync(FilmeCreateDto dto);
+        Task<IEnumerable<FilmeReadDto>> GetFilmesAsync(int? top = null);
+        Task<IEnumerable<FilmeReadDto>> GetFilmesRankedAsync(int top);
+        Task<FilmeReadDto?> GetFilmeByIdAsync(int id);
+        Task<FilmeReadDto?> UpdateFilmeAsync(int id, FilmeCreateDto dto);
+        Task<bool> DeleteFilmeAsync(int id);
+    }
 }

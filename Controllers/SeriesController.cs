@@ -1,29 +1,58 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using CineReview.Api.Data;
-using CineReview.Api.Models;
+﻿using CineReview.Api.DTOs;
+using CineReview.Api.Services;
+using CineReview.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CineReview.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 public class SeriesController : ControllerBase
 {
-    private readonly CineReviewContext _context;
+    private readonly ISerieService _service;
 
-    public SeriesController(CineReviewContext context)
+    public SeriesController(ISerieService service)
     {
-        _context = context;
-    }
-
-    [HttpGet]
-    public IActionResult GetSeries()
-    {
-        return Ok(_context.Series.ToList());
+        _service = service;
     }
 
     [HttpPost]
-    public IActionResult CriarSerie([FromBody] Serie serie)
+    public async Task<IActionResult> Create(SerieCreateDto dto)
     {
-        _context.Series.Add(serie);
-        _context.SaveChanges();
-        return CreatedAtAction(nameof(GetSeries), new { id = serie.Id }, serie);
+        var result = await _service.CreateAsync(dto);
+        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll([FromQuery] int? top = null)
+    {
+        return Ok(await _service.GetAllAsync(top));
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var result = await _service.GetByIdAsync(id);
+        return result == null ? NotFound() : Ok(result);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, SerieCreateDto dto)
+    {
+        var result = await _service.UpdateAsync(id, dto);
+        return result == null ? NotFound() : Ok(result);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var ok = await _service.DeleteAsync(id);
+        return ok ? NoContent() : NotFound();
+    }
+
+    [HttpGet("ranking/{top}")]
+    public async Task<IActionResult> Ranking(int top)
+    {
+        return Ok(await _service.GetRankingAsync(top));
     }
 }

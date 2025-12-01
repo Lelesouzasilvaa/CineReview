@@ -1,24 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using CineReview.Api.DTOs.Auth;
+using CineReview.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly IAuthServices _auth;
+    private readonly IAuthService _authService;
 
-    public AuthController(IAuthServices auth)
+    public AuthController(IAuthService authService)
     {
-        _auth = auth;
+        _authService = authService;
     }
 
-    [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginDTO dto)
-    {
-        var token = await _auth.Login(dto.Email, dto.Senha);
-
-        if (token == null)
-            return Unauthorized("Email ou senha inválidos");
-
-        return Ok(new { token });
-    }
 }

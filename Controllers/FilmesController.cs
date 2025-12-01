@@ -1,62 +1,59 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using CineReview.Api.DTOs;
-using CineReview.Api.Services;
-using System.Threading.Tasks;
+﻿using CineReview.Api.DTOs;
+using CineReview.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CineReview.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/filmes")]
     public class FilmesController : ControllerBase
     {
-        private readonly IMidiaService _midiaService;
+        private readonly IFilmeService _filmeService;
 
-        public FilmesController(IMidiaService midiaService)
+        public FilmesController(IFilmeService filmeService)
         {
-            _midiaService = midiaService;
+            _filmeService = filmeService;
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create(FilmeCreateDto dto)
+        {
+            var result = await _filmeService.CreateAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] int? top)
         {
-            var filmes = await _midiaService.GetFilmesAsync(top);
-            return Ok(filmes);
+            return Ok(await _filmeService.GetAllAsync(top));
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var filme = await _midiaService.GetFilmeByIdAsync(id);
-            if (filme == null) return NotFound();
-            return Ok(filme);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] FilmeCreateDto dto)
-        {
-            var created = await _midiaService.CreateFilmeAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            var result = await _filmeService.GetByIdAsync(id);
+            return result == null ? NotFound() : Ok(result);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] FilmeCreateDto dto)
+        public async Task<IActionResult> Update(int id, FilmeCreateDto dto)
         {
-            
-            return StatusCode(501, "Update não implementado no serviço (adicione método UpdateAsync na interface/serviço).");
+            var result = await _filmeService.UpdateAsync(id, dto);
+            return result == null ? NotFound() : Ok(result);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            
-            return StatusCode(501, "Delete não implementado no serviço (adicione método DeleteAsync na interface/serviço).");
+            return await _filmeService.DeleteAsync(id)
+                ? NoContent()
+                : NotFound();
         }
 
-        [HttpGet("ranking")]
-        public async Task<IActionResult> Ranking([FromQuery] int top = 10)
+        [HttpGet("ranking/{top}")]
+        public async Task<IActionResult> Ranking(int top)
         {
-            var ranked = await _midiaService.GetFilmesRankedAsync(top);
-            return Ok(ranked);
+            return Ok(await _filmeService.GetRankingAsync(top));
         }
     }
 }

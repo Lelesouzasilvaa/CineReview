@@ -3,107 +3,108 @@ using CineReview.Api.DTOs;
 using CineReview.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace CineReview.Api.Services.Implementations;
-
-public class MidiaService : IMidiaService
+namespace CineReview.Api.Services.Implementations
 {
-    private readonly CineReviewContext _context;
-
-    public MidiaService(CineReviewContext context)
+    public class MidiaService : IMidiaService
     {
-        _context = context;
-    }
+        private readonly CineReviewContext _context;
 
-
-    // 1) Criar Filme
-
-    public async Task<FilmeReadDto> CreateFilmeAsync(FilmeCreateDto dto)
-    {
-        var filme = new Filme
+        public MidiaService(CineReviewContext context)
         {
-            Titulo = dto.Titulo,
-            Descricao = dto.Descricao,
-            Diretor = dto.Diretor,
-            Lancamento = dto.Lancamento,
-            NotaMedia = 0 // começa com 0 antes das avaliações
-        };
+            _context = context;
+        }
 
-        _context.Filmes.Add(filme);
-        await _context.SaveChangesAsync();
-
-        return new FilmeReadDto
+        public async Task<FilmeReadDto> CreateFilmeAsync(FilmeCreateDto dto)
         {
-            Id = filme.Id,
-            Titulo = filme.Titulo,
-            Descricao = filme.Descricao,
-            Diretor = filme.Diretor,
-            Lancamento = filme.Lancamento,
-            NotaMedia = filme.NotaMedia
-        };
-    }
+            var filme = new Filme
+            {
+                Titulo = dto.Titulo,
+                Descricao = dto.Descricao,
+                Diretor = dto.Diretor,
+                Lancamento = dto.Lancamento,
+                Genero = dto.Genero,
+                DuracaoMinutos = dto.DuracaoMinutos,
+                NotaMedia = 0
+            };
 
-    // 2) Listar todos os filmes
+            _context.Filmes.Add(filme);
+            await _context.SaveChangesAsync();
 
-    public async Task<IEnumerable<FilmeReadDto>> GetFilmesAsync(int? top = null)
-    {
-        var query = _context.Filmes
-            .OrderByDescending(f => f.Id)
-            .AsQueryable();
+            return MapToReadDto(filme);
+        }
 
-        if (top.HasValue)
-            query = query.Take(top.Value);
-
-        var filmes = await query.ToListAsync();
-
-        return filmes.Select(f => new FilmeReadDto
+        public async Task<IEnumerable<FilmeReadDto>> GetFilmesAsync(int? top = null)
         {
-            Id = f.Id,
-            Titulo = f.Titulo,
-            Descricao = f.Descricao,
-            Diretor = f.Diretor,
-            Lancamento = f.Lancamento,
-            NotaMedia = f.NotaMedia
-        });
-    }
+            var query = _context.Filmes.AsQueryable();
 
-    // 3) Listar filmes mais bem avaliados
+            if (top.HasValue && top > 0)
+                query = query.Take(top.Value);
 
-    public async Task<IEnumerable<FilmeReadDto>> GetFilmesRankedAsync(int top)
-    {
-        var filmes = await _context.Filmes
-            .OrderByDescending(f => f.NotaMedia)
-            .Take(top)
-            .ToListAsync();
+            var list = await query.ToListAsync();
+            return list.Select(MapToReadDto);
+        }
 
-        return filmes.Select(f => new FilmeReadDto
+        public async Task<FilmeReadDto?> GetFilmeByIdAsync(int id)
         {
-            Id = f.Id,
-            Titulo = f.Titulo,
-            Descricao = f.Descricao,
-            Diretor = f.Diretor,
-            Lancamento = f.Lancamento,
-            NotaMedia = f.NotaMedia
-        });
-    }
+            var filme = await _context.Filmes.FindAsync(id);
+            if (filme == null) return null;
 
+            return MapToReadDto(filme);
+        }
 
-    // 4) Buscar filme por ID
-
-    public async Task<FilmeReadDto?> GetFilmeByIdAsync(int id)
-    {
-        var filme = await _context.Filmes.FindAsync(id);
-
-        if (filme == null)
-            return null;
-
-        return new FilmeReadDto
+        public async Task<FilmeReadDto?> UpdateFilmeAsync(int id, FilmeCreateDto dto)
         {
-            Id = filme.Id,
-            Titulo = filme.Titulo,
-            Descricao = filme.Descricao,
-            Diretor = filme.Diretor,
-            Lancamento = filme.Lancamento,
-            NotaMedia = filme.NotaMedia
-        };
+            var filme = await _context.Filmes.FindAsync(id);
+            if (filme == null) return null;
+
+            filme.Titulo = dto.Titulo;
+            filme.Descricao = dto.Descricao;
+            filme.Diretor = dto.Diretor;
+            filme.Lancamento = dto.Lancamento;
+            filme.Genero = dto.Genero;
+            filme.DuracaoMinutos = dto.DuracaoMinutos;
+
+            await _context.SaveChangesAsync();
+
+            return MapToReadDto(filme);
+        }
+
+        public async Task<bool> DeleteFilmeAsync(int id)
+        {
+            var filme = await _context.Filmes.FindAsync(id);
+            if (filme == null) return false;
+
+            _context.Filmes.Remove(filme);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<IEnumerable<FilmeReadDto>> GetFilmesRankedAsync(int top)
+        {
+            var list = await _context.Filmes
+                .OrderByDescending(f => f.NotaMedia)
+                .Take(top)
+                .ToListAsync();
+
+            return list.Select(MapToReadDto);
+        }
+
+        // ------------------------------
+        // MAPPER
+        // ------------------------------
+        private FilmeReadDto MapToReadDto(Filme f)
+        {
+            return new FilmeReadDto
+            {
+                Id = f.Id,
+                Titulo = f.Titulo,
+                Descricao = f.Descricao,
+                Diretor = f.Diretor,
+                Genero = f.Genero,
+                Lancamento = f.Lancamento,
+                DuracaoMinutos = f.DuracaoMinutos,
+                NotaMedia = f.NotaMedia
+            };
+        }
     }
 }
