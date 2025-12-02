@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace CineReview.Api.Services.Implementations
@@ -13,24 +14,29 @@ namespace CineReview.Api.Services.Implementations
     public class AuthService : IAuthService
     {
         private readonly CineReviewContext _context;
-        private readonly IConfiguration _config;
+        private readonly IConfiguration _configuration;
 
-        public AuthService(CineReviewContext context, IConfiguration config)
+        public AuthService(CineReviewContext context, IConfiguration configuration)
         {
             _context = context;
-            _config = config;
+            _configuration = configuration;
         }
 
+        // Registro de usuário
         public async Task<UserReadDto> RegistrarAsync(RegisterDto dto)
         {
-            if (await _context.Usuarios.AnyAsync(x => x.Email == dto.Email))
-                throw new Exception("E-mail já cadastrado.");
+            // Verifica se o email já existe
+            if (await _context.Usuarios.AnyAsync(u => u.Email == dto.Email))
+                throw new Exception("Email já cadastrado.");
+
+            // Cria hash seguro da senha
+            var senhaHash = GerarHashSeguro(dto.Senha);
 
             var usuario = new Usuario
             {
                 Nome = dto.Nome,
                 Email = dto.Email,
-                SenhaHash = dto.Senha  // senha "crua"
+                SenhaHash = senhaHash
             };
 
             _context.Usuarios.Add(usuario);
@@ -40,50 +46,72 @@ namespace CineReview.Api.Services.Implementations
             {
                 Id = usuario.Id,
                 Nome = usuario.Nome,
-                Email = usuario.Email,
-                Token = GerarToken(usuario)
+                Email = usuario.Email
             };
         }
 
+        // Login
         public async Task<UserReadDto> LoginAsync(LoginDto dto)
         {
-            var usuario = await _context.Usuarios.FirstOrDefaultAsync(x => x.Email == dto.Email);
+            var usuario = await _context.Usuarios
+                .FirstOrDefaultAsync(u => u.Email == dto.Email);
 
-            // Comparação simples da senha em texto puro
-            if (usuario == null || usuario.SenhaHash != dto.Senha)
-                throw new UnauthorizedAccessException("Credenciais inválidas.");
+            if (usuario == null || !VerificarHashSeguro(dto.Senha, usuario.SenhaHash))
+                throw new UnauthorizedAccessException("Email ou senha incorretos.");
 
             return new UserReadDto
             {
                 Id = usuario.Id,
                 Nome = usuario.Nome,
-                Email = usuario.Email,
-                Token = GerarToken(usuario)
+                Email = usuario.Email
             };
         }
 
+        // Gera token JWT
         public string GerarToken(Usuario usuario)
         {
-            var key = Encoding.ASCII.GetBytes(_config["Jwt:Key"]);
-
-            var claims = new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-                new Claim(ClaimTypes.Name, usuario.Nome),
-                new Claim(ClaimTypes.Email, usuario.Email)
-            };
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddHours(4),
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                    new Claim(ClaimTypes.Name, usuario.Nome),
+                    new Claim(ClaimTypes.Email, usuario.Email)
+                }),
+                Expires = DateTime.UtcNow.AddHours(2),
                 SigningCredentials = new SigningCredentials(
                     new SymmetricSecurityKey(key),
                     SecurityAlgorithms.HmacSha256Signature)
             };
 
-            var tokenHandler = new JwtSecurityTokenHandler();
-            return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
+
+        // ========================
+        // HASH SEGURO COM SALT
+        // ========================
+        private string GerarHashSeguro(string senha)
+        {
+            var salt = RandomNumberGenerator.GetBytes(16);
+            using var derive = new Rfc2898DeriveBytes(senha, salt, 100_000, HashAlgorithmName.SHA256);
+            var hash = derive.GetBytes(32);
+            return $"{Convert.ToBase64String(salt)}:{Convert.ToBase64String(hash)}";
+        }
+
+        private bool VerificarHashSeguro(string senha, string senhaHash)
+        {
+            var parts = senhaHash.Split(':');
+            var salt = Convert.FromBase64String(parts[0]);
+            var hash = Convert.FromBase64String(parts[1]);
+
+            using var derive = new Rfc2898DeriveBytes(senha, salt, 100_000, HashAlgorithmName.SHA256);
+            var testHash = derive.GetBytes(32);
+
+            return testHash.SequenceEqual(hash);
         }
     }
 }

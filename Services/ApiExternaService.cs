@@ -1,22 +1,28 @@
-﻿namespace CineReview.Api.Services;
-public interface IApiExternaService
-{
-    Task<string> BuscarFilmeOMDb(string titulo);
-}
+﻿using System.Net.Http;
+using System.Threading.Tasks;
+using CineReview.Api.Services;
 
-public class ApiExternaService : IApiExternaService
+namespace CineReview.Api.Services
 {
-    private readonly HttpClient _httpClient;
-
-    public ApiExternaService(HttpClient httpClient)
+    public interface IApiExternaService
     {
-        _httpClient = httpClient;
+        Task<string> BuscarFilmeOMDb(string titulo);
     }
 
-    public async Task<string> BuscarFilmeOMDb(string titulo)
+    public class ApiExternaService : IApiExternaService
     {
-        string apiKey = "SUA_CHAVE_OMDB";
-        var response = await _httpClient.GetAsync($"https://www.omdbapi.com/?t={titulo}&apikey={apiKey}");
-        return await response.Content.ReadAsStringAsync();
+        private readonly HttpClient _httpClient;
+
+        public ApiExternaService(HttpClient httpClient)
+        {
+            _httpClient = httpClient;
+        }
+
+        public async Task<string> BuscarFilmeOMDb(string titulo)
+        {
+            string apiKey = "SUA_CHAVE_OMDB";
+            var response = await _httpClient.GetAsync($"https://www.omdbapi.com/?t={titulo}&apikey={apiKey}");
+            return await response.Content.ReadAsStringAsync();
+        }
     }
 }

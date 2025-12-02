@@ -14,7 +14,11 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Registra serviços corretos
+// Configura EF Core com SQL Server
+builder.Services.AddDbContext<CineReviewContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Registra serviços
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMidiaService, MidiaService>();
 builder.Services.AddScoped<IFilmeService, FilmeService>();
@@ -23,11 +27,7 @@ builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IApiExternaService, ApiExternaService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
-// Configura EF Core com SQLite
-builder.Services.AddDbContext<CineReviewContext>(options =>
-options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// CONFIGURAÇÃO DO JWT
+// Configuração do JWT
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrWhiteSpace(jwtKey))
     throw new InvalidOperationException("Jwt:Key não está configurado no appsettings.json");
@@ -52,10 +52,9 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddHttpClient();
 
-// Cria o app
 var app = builder.Build();
 
-// Configura o pipeline
+// Configura pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
