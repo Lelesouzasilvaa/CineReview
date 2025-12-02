@@ -1,5 +1,6 @@
 ﻿using CineReview.Api.DTOs.Reviews;
 using CineReview.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CineReview.Api.Controllers
@@ -16,6 +17,7 @@ namespace CineReview.Api.Controllers
         }
 
         // POST: api/Reviews
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> Criar([FromBody] ReviewCreateDto dto)
         {
@@ -52,6 +54,7 @@ namespace CineReview.Api.Controllers
         }
 
         // PUT: api/Reviews/{id}
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> Atualizar(int id, [FromBody] ReviewUpdateDto dto)
         {
@@ -61,6 +64,7 @@ namespace CineReview.Api.Controllers
         }
 
         // DELETE: api/Reviews/{id}
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Excluir(int id)
         {

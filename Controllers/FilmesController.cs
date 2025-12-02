@@ -1,5 +1,6 @@
 ﻿using CineReview.Api.DTOs;
 using CineReview.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CineReview.Api.Controllers
@@ -15,6 +16,7 @@ namespace CineReview.Api.Controllers
             _filmeService = filmeService;
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> Create(FilmeCreateDto dto)
         {
@@ -35,6 +37,7 @@ namespace CineReview.Api.Controllers
             return result == null ? NotFound() : Ok(result);
         }
 
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, FilmeCreateDto dto)
         {
@@ -42,6 +45,8 @@ namespace CineReview.Api.Controllers
             return result == null ? NotFound() : Ok(result);
         }
 
+
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
